@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Local measurement and intermediate data
+input/
+steps_raw/
+steps_corrected/
+
+# Generated results
+evaluation/
+plots/
+
+# Safety: don't accidentally commit measurement CSV files
+*.csv
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE settings
+.idea/
+
+# OS-generated files
+Thumbs.db
+.DS_Store
