@@ -1,4 +1,5 @@
 import sys
+import settings
 from pathlib import Path
 from biologic_bcs915_csv_steps_to_csv import steps_to_csv
 from corrected_files_from_raw_csv import corrected_files
@@ -28,7 +29,7 @@ def main():
     # 915 eine große CSV mit allen Techniken (Standard)
 
     # 815 für alten BCS 815, alles andere ist 915 (Standard)
-    potentiostat = "815"
+    potentiostat = settings.potentiostat
 
     # ========================================================
     # Einstellungen Plots
@@ -36,11 +37,11 @@ def main():
 
     # =================   Show Plots?   ======================
 
-    plot_show_plots = False
+    plot_show_plots = settings.plot_show_plots
 
     # ================   Overlay Plots?   ====================
 
-    overlay_plots = False
+    overlay_plots = settings.overlay_plots
 
     # ==============   Overlay Settings    ===================
 
@@ -50,14 +51,9 @@ def main():
     # loop: Nummer des Loops als integer
     # segment: Normalerweise main, für PEIS/GEIS: hold = CV Anteil, eis = EIS Anteil
 
-    overlay_plot_name = "Overlay_Plot"
+    overlay_plot_name = settings.overlay_plot_name
 
-    overlay_plots_dict = {
-        "step": ("task_5", "task_9", "task_11"),
-        "task": ("PEIS", "PEIS", "PEIS"),
-        "loop": (1, 1, 1),
-        "segment": ("eis", "eis", "eis")
-    }
+    overlay_plots_dict = settings.overlay_plots_dict
 
     # NOTE: nur Overlays für die gleiche Methode sind implementiert! → "task" müssen alle gleich sein!
 
@@ -67,11 +63,11 @@ def main():
 
 
     # Ausführen?
-    lsv_extended = True # CURRENT LSV NOCH HINZUFÜGEN !!!!!!!!!!!
+    lsv_extended = settings.lsv_extended
 
     # Auswahl der Smoothing Methode -> "rolling für rolling mean, sonst automatisch "bucket"
-    smoothing_method = "rolling"
-    prominence = 1.1
+    smoothing_method = settings.smoothing_method
+    prominence = settings.prominence
 
     # =================   Rolling Mean   ======================
     # Gute Rauschunterdrückung aber schneidet am Anfang einige Punkte als NaN ab!
@@ -81,19 +77,19 @@ def main():
         # Rauschunterdrückung: Gibt an über wie viele Punkte gemittelt wird
         # Im Zweifel prüfen wie viele Punkte / mV aufgenommen wurden
         # Wichtig
-        current_smoothing_1st_derivative = 10 # → Glättet den Strom für 1. Ableitung
-        current_smoothing_2nd_derivative = 50 # → Glättet den Strom für 2. Ableitung
-        derivative_smoothing_2nd_derivative = 120 # → Glättet die 1. Ableitung vor der 2.
+        current_smoothing_1st_derivative = settings.current_smoothing_1st_derivative # → Glättet den Strom für 1. Ableitung
+        current_smoothing_2nd_derivative = settings.current_smoothing_2nd_derivative # → Glättet den Strom für 2. Ableitung
+        derivative_smoothing_2nd_derivative = settings.derivative_smoothing_2nd_derivative # → Glättet die 1. Ableitung vor der 2.
 
         # Savgol Kriterien
         # Savgol Widnow Points -> wie viele Punkte verwendet der Savgol Filter für Fits
         # Muss < Feature-Breite sein -> Point Distance x savgol_window_size < Feature-Breite
-        savgol_window_points = 91
+        savgol_window_points = settings.savgol_window_points
 
         # Bucket Parameters not used
-        bucket_width = None
-        min_feature_size = None
-        feature_points = None
+        bucket_width = settings.bucket_width
+        min_feature_size = settings.min_feature_size
+        feature_points = settings.feature_points
 
     # ===============   Bucket Smoothing   ====================
     # Bucket Smoothing NUR bei vielen Datenpunkten oder wenig verrauschten Daten!
@@ -101,10 +97,10 @@ def main():
 
     else:  # Else -> Smoothing Method wird immer "Bucket"
         # Bucket Parameters
-        bucket_width = 0.01  # in V
-        min_feature_size = 0.1  # in V
-        feature_points = round(min_feature_size / bucket_width)
-        savgol_window_points = round(min_feature_size / bucket_width / 2)
+        bucket_width = settings.bucket_width  # in V
+        min_feature_size = settings.min_feature_size  # in V
+        feature_points = settings.feature_points
+        savgol_window_points = settings.savgol_window_points
 
         # Savgol Kriterien
         if savgol_window_points % 2 == 0:
@@ -116,68 +112,28 @@ def main():
 
 
         #Rolling Parameters not used
-        current_smoothing_1st_derivative = None
-        current_smoothing_2nd_derivative = None
-        derivative_smoothing_2nd_derivative = None
+        current_smoothing_1st_derivative = settings.current_smoothing_1st_derivative
+        current_smoothing_2nd_derivative = settings.current_smoothing_2nd_derivative
+        derivative_smoothing_2nd_derivative = settings.derivative_smoothing_2nd_derivative
 
 
     # ==========   Peak Analysis   ===============
 
     # Auf welchen Höhen werden Peakbreiten analysiert (-> CSV)
-    peak_width_rel_heights = [0.5, 0.8, 0.95]
+    peak_width_rel_heights = settings.peak_width_rel_heights
 
     # Auf welchen relativen Peakhöhen liegen die Peakmarker in den Plots
-    plot_peak_width_rel_height = 0.5
+    plot_peak_width_rel_height = settings.plot_peak_width_rel_height
 
     # ==========   LSV Sensitivity Analysis   ===============
 
-    lsv_sensitivity_plots = False
+    lsv_sensitivity_plots = settings.lsv_sensitivity_plots
 
-    lsv_sensitivity_analysis = False
+    lsv_sensitivity_analysis = settings.lsv_sensitivity_analysis
 
-    lsv_sensitivity_overlay_plots = False
+    lsv_sensitivity_overlay_plots = settings.lsv_sensitivity_overlay_plots
 
-    lsv_sensitivity_configs = [
-        {
-            "label": "low_smoothing",
-            "current_smoothing_1st_derivative": 10,
-            "current_smoothing_2nd_derivative": 10,
-            "derivative_smoothing_2nd_derivative": 50,
-            "savgol_window_points": 101,
-            "prominence": 1.3,
-            "bucket_width": 0.05,
-            "min_feature_size": 0.1,
-            "smoothing_method": smoothing_method,
-            "peak_width_rel_heights": peak_width_rel_heights,
-            "plot_peak_width_rel_height": plot_peak_width_rel_height,
-        },
-        {
-            "label": "medium_smoothing",
-            "current_smoothing_1st_derivative": 40,
-            "current_smoothing_2nd_derivative": 30,
-            "derivative_smoothing_2nd_derivative": 100,
-            "savgol_window_points": 101,
-            "prominence": 1.4,
-            "bucket_width": 0.025,
-            "min_feature_size": 0.1,
-            "smoothing_method": smoothing_method,
-            "peak_width_rel_heights": peak_width_rel_heights,
-            "plot_peak_width_rel_height": plot_peak_width_rel_height,
-        },
-        {
-            "label": "high_smoothing",
-            "current_smoothing_1st_derivative": 70,
-            "current_smoothing_2nd_derivative": 75,
-            "derivative_smoothing_2nd_derivative": 150,
-            "savgol_window_points": 101,
-            "prominence": 1.4,
-            "bucket_width": 0.05,
-            "min_feature_size": 0.1,
-            "smoothing_method": smoothing_method,
-            "peak_width_rel_heights": peak_width_rel_heights,
-            "plot_peak_width_rel_height": plot_peak_width_rel_height,
-        },
-    ]
+    lsv_sensitivity_configs = settings.lsv_sensitivity_configs
 
 
     # ========================================================
@@ -186,9 +142,9 @@ def main():
 
     # Voltage Angaben in V
 
-    lsv_linear_fit = False
-    fit_start_voltage = 2.3
-    fit_end_voltage = 2.5
+    lsv_linear_fit = settings.lsv_linear_fit
+    fit_start_voltage = settings.fit_start_voltage
+    fit_end_voltage = settings.fit_end_voltage
 
 
     # ========================================================
@@ -198,20 +154,20 @@ def main():
     # =============   Kennlinien auswerten?   =================
 
     # für Kennlinien: "True", für Einzelmessungen "False"
-    evaluate_curves = False
+    evaluate_curves = settings.evaluate_curves
 
     # Sollen Plots gezeigt werden in "evaluate"?
-    evaluate_show_plots = False
+    evaluate_show_plots = settings.evaluate_show_plots
 
     # ========================================================
     # Folders
     # ========================================================
 
-    raw_input_dir = Path("input")
-    steps_raw_dir = Path("steps_raw")
-    steps_corrected_dir = Path("steps_corrected")
-    plot_dir = Path("plots")
-    evaluate_dir = Path("evaluation")
+    raw_input_dir = settings.raw_input_dir
+    steps_raw_dir = settings.steps_raw_dir
+    steps_corrected_dir = settings.steps_corrected_dir
+    plot_dir = settings.plot_dir
+    evaluate_dir = settings.evaluate_dir
 
     # ========================================================
     # Dateien aufrufen
