@@ -32,6 +32,18 @@ def main():
     potentiostat = settings.potentiostat
 
     # ========================================================
+    # Einstellungen Tabellen-Export
+    # ========================================================
+
+    # ACHTUNG: der Output ist aktuell für die Software DearEis angepasst -> ggf. Format anpassen
+
+    # "plot" → nur plotten, kein Export
+    # "deareis" → keine Plots, nur die Tabellen
+    # "both" → beides ausgeben
+
+    eis_output = settings.eis_output
+
+    # ========================================================
     # Einstellungen Plots
     # ========================================================
 
@@ -168,6 +180,7 @@ def main():
     steps_corrected_dir = settings.steps_corrected_dir
     plot_dir = settings.plot_dir
     evaluate_dir = settings.evaluate_dir
+    export_dir = settings.export_dir
 
     # ========================================================
     # Dateien aufrufen
@@ -177,7 +190,7 @@ def main():
     else:
         raw_counts, skipped_rows = steps_to_csv(raw_input_dir, steps_raw_dir)
     corrected_counts = corrected_files(steps_raw_dir, steps_corrected_dir)
-    plot_results, lsv_lines_cut, eis_hold_values, width_df = plot_corrected(
+    plot_results, lsv_lines_cut, eis_hold_values, width_df, deareis_export_data = plot_corrected(
                                                                             steps_corrected_dir,
                                                                             plot_dir,plot_show_plots,
                                                                             lsv_extended,
@@ -200,7 +213,8 @@ def main():
                                                                             overlay_plot_name,
                                                                             lsv_linear_fit,
                                                                             fit_start_voltage,
-                                                                            fit_end_voltage
+                                                                            fit_end_voltage,
+                                                                            eis_output,
                                                                             )
 
 
@@ -245,6 +259,16 @@ def main():
     # ========================================================
     # Dokumentationsdatei für Evaluate, Print
     # ========================================================
+
+
+    if eis_output in ("both", "deareis"):
+
+        export_dir.mkdir(parents=True, exist_ok=True)
+
+        for measurement_id, deareis_df in deareis_export_data.items():
+            step, task, loop1, segment = measurement_id
+            deareis_filename = f"{step}_{task}_loop_{loop1:.0f}_{segment}_DearEIS.csv"
+            deareis_df.to_csv(export_dir / f"{deareis_filename}", index=False)
 
     if lsv_extended:
 

@@ -848,6 +848,7 @@ def plot_corrected(
         lsv_linear_fit=False,
         fit_start_voltage=2.3,
         fit_end_voltage=2.5,
+        eis_output="plot",
         ):
 
     if lsv_sensitivity_configs is None:
@@ -857,6 +858,7 @@ def plot_corrected(
     overlay_plots_data = []
     overlay_plots_diff1 = []
     overlay_plots_diff2 = []
+    deareis_export_data = {}
 
     # ========================================================
     # File Handling
@@ -935,6 +937,24 @@ def plot_corrected(
         impedance_phase = df["Impedance phase /rad"]
         real_impedance = df["Real impedance /Ohms"]
         imaginary_impedance = df["- Imaginary impedance /Ohms"]
+
+        # ========================================================
+        # DEAREIS Export df erzeugen
+        # ========================================================
+
+        if method in ("PEIS", "GEIS") and segment == "eis":
+            if eis_output in ("deareis", "both"):
+                deareis_df = pd.DataFrame({
+                    "freq": frequency,
+                    "zre": real_impedance,
+                    "zim": -imaginary_impedance
+                }).dropna()
+                # DearEIS benötigt nur freq, zre und zim für Nyquist- und Bode-Plots.
+                # Für andere Exportformate ggf. Impedanzbetrag und Phase ergänzen.
+                # Achtung: Die Phase liegt in den Quelldaten in Radiant vor.
+
+                deareis_export_data[measurement_id] = deareis_df
+
 
         # ========================================================
         # LSV Extended
@@ -1230,8 +1250,11 @@ def plot_corrected(
                 else:
                     eis_hold_values[measurement_id] = math.nan, math.nan
             elif segment == "eis":
-                plot_results[measurement_id] = "plot saved"
-                peis_nyquist(real_impedance, imaginary_impedance, file_path, output_dir, step, show_plots,loop1, voltage)
+                if eis_output in ("plot", "both"):
+                    plot_results[measurement_id] = "plot saved"
+                    peis_nyquist(real_impedance, imaginary_impedance, file_path, output_dir, step, show_plots,loop1, voltage)
+                else:
+                    plot_results[measurement_id] = "export only"
         elif method == "GEIS":
             if segment == "hold":
                 plot_results[measurement_id] = "plot saved"
@@ -1241,9 +1264,11 @@ def plot_corrected(
                 else:
                     eis_hold_values[measurement_id] = math.nan, math.nan
             elif segment == "eis":
-                plot_results[measurement_id] = "plot saved"
-                geis_nyquist(real_impedance, imaginary_impedance, file_path, output_dir, step, show_plots,loop1, current)
-
+                if eis_output in ("plot", "both"):
+                    plot_results[measurement_id] = "plot saved"
+                    geis_nyquist(real_impedance, imaginary_impedance, file_path, output_dir, step, show_plots,loop1, current)
+                else:
+                    plot_results[measurement_id] = "export only"
         elif method == "VS":
             plot_results[measurement_id] = "plot saved"
             lsv_plot(voltage, current, file_path, output_dir, step, show_plots,loop1)
@@ -1280,4 +1305,4 @@ def plot_corrected(
             # Aufruf diff 2 Funktion
             plot_overlay(overlay_plots_diff2, output_dir, show_plots, overlay_plot_name)
 
-    return plot_results, lsv_lines_cut, eis_hold_values, width_df
+    return plot_results, lsv_lines_cut, eis_hold_values, width_df, deareis_export_data

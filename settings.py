@@ -20,6 +20,20 @@ from pathlib import Path
 # 815 für alten BCS 815, alles andere ist 915 (Standard)
 potentiostat = "915"
 
+
+# ========================================================
+# Einstellungen Tabellen-Export
+# ========================================================
+
+# ACHTUNG: der Output ist aktuell für die Software DearEis angepasst -> ggf. Format anpassen
+
+# "plot" → nur plotten, kein Export
+# "deareis" → keine Plots, nur die Tabellen
+# "both" → beides ausgeben
+
+eis_output = "deareis"
+
+
 # ========================================================
 # Einstellungen Plots
 # ========================================================
@@ -57,7 +71,7 @@ overlay_plots_dict = {
 
 
 # Ausführen?
-lsv_extended = True  # CURRENT LSV NOCH HINZUFÜGEN !!!!!!!!!!!
+lsv_extended = True  # CURRENT LSV NOCH HINZUFÜGEN !
 
 # Auswahl der Smoothing Methode -> "rolling für rolling mean, sonst automatisch "bucket"
 smoothing_method = "rolling"
@@ -184,7 +198,7 @@ fit_end_voltage = 2.5
 # =============   Kennlinien auswerten?   =================
 
 # für Kennlinien: "True", für Einzelmessungen "False"
-evaluate_curves = False
+evaluate_curves = True
 
 # Sollen Plots gezeigt werden in "evaluate"?
 evaluate_show_plots = False
@@ -198,3 +212,4 @@ steps_raw_dir = Path("steps_raw")
 steps_corrected_dir = Path("steps_corrected")
 plot_dir = Path("plots")
 evaluate_dir = Path("evaluation")
+export_dir = Path("export")
