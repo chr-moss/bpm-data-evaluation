@@ -21,15 +21,32 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
     # File öffnen, Header Position für Pandas finden
 
     for file_path in input_dir.glob("*.csv"):
-        header_row = None
 
-        with open(file_path, newline="") as file:
-            for line_number, line in enumerate(file):
-                if line.startswith("Time /s"): # Header Row finden
-                    header_row = line_number
-                    break
+        for encoding in ("utf-8-sig", "cp1252"):
+            try:
+                header_row = None
 
-        df = pd.read_csv(file_path, skiprows=header_row)
+                with open(file_path, newline="", encoding=encoding) as file:
+                    for line_number, line in enumerate(file):
+                        if line.startswith("Time /s"):
+                            header_row = line_number
+                            break
+
+                if header_row is None:
+                    raise ValueError(f"Header not found: {file_path.name}")
+
+                df = pd.read_csv(
+                    file_path,
+                    skiprows=header_row,
+                    encoding=encoding
+                )
+
+                print(f"{file_path.name}: Encoding {encoding}")
+                break
+
+            except UnicodeDecodeError:
+                if encoding == "cp1252":
+                    raise
 
         columns_to_keep = [
             "Time /s",
@@ -59,7 +76,7 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
             # NOW: Group by Loop 1 number to separate repeated method sequences.
             # Nested loops (Loop 2-4) are retained as columns but not used for grouping yet.
             if pd.isna(loop1) or loop1 == "":
-                output_path = output_dir / f"{file_path.stem}_{step}_no_loop.csv"
+                output_path = output_dir / f"{file_path.stem}_{step}.csv"
             else:
                 output_path = output_dir / f"{file_path.stem}_{step}_{loop1:.0f}.csv"
             if task == "REST": # Rest wird nicht ausgewertet daher übersprungen

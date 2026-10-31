@@ -164,13 +164,18 @@ def evaluate(input_folder: Path, output_folder: Path, eis_hold_values, show_plot
 
     # File öffnen, Output Path kommt ggf. später dazu - Dataframe erstellen
 
-    for file_path in input_dir.glob("*.csv"):
-        df = pd.read_csv(file_path)
+    for original_file_path in input_dir.glob("*.csv"):
+        df = pd.read_csv(original_file_path)
+
+        file_path = original_file_path.with_stem(
+            original_file_path.stem.removesuffix("_corrected")
+        )
 
         # Measurement_id für Doku definieren
         measurement_id = (df["Step"].iloc[0], df["Task"].iloc[0], df["Loop 1 number"].iloc[0], df["Segment"].iloc[0])
         method = df["Task"].iloc[0]
         loop1 = df["Loop 1 number"].iloc[0] #brauchen wir für Aufteilung in Ordner
+        loop_id = None if pd.isna(loop1) else loop1
         segment = df["Segment"].iloc[0]
 
         if method not in ["PEIS", "GEIS"] or segment != "eis":
@@ -211,7 +216,7 @@ def evaluate(input_folder: Path, output_folder: Path, eis_hold_values, show_plot
         real_impedance = eis_df["Real impedance /Ohms"]
         imaginary_impedance = eis_df["- Imaginary impedance /Ohms"]
 
-        hold_id = (step, task, loop1, "hold")
+        hold_id = (step, task, loop_id, "hold")
 
         # ========================================================
         # Ermittlung des HFR und Vorbereitung HFR-Plot

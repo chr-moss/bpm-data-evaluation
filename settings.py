@@ -1,19 +1,24 @@
 from pathlib import Path
 
+
 # ========================================================
 # Anwendung
 # ========================================================
+
 
 # BCS 915: *EINE* CSV-Datei mit CV, VS, CC, GEIS, PEIS
 # BCS 815: Beliebig viele MPR-Dateien mit CstV oder LSV
 
 # EIS und MB aktuell nicht für BCS 815
 
+
 # ========================================================
 # Einstellungen Datenquelle
 # ========================================================
 
+
 # ==============   BCS 815 oder 915?   ===================
+
 # 815 verwendet MPR über Galvani (aktuell nur VS und CV)
 # 915 eine große CSV mit allen Techniken (Standard)
 
@@ -22,8 +27,17 @@ potentiostat = "915"
 
 
 # ========================================================
-# Einstellungen Tabellen-Export
+# Einstellungen Export
 # ========================================================
+
+# =================   CSV general   ======================
+
+# Measurement Documentation - CSV Export
+csv_separator = ";"
+csv_decimal = ","
+csv_encoding = "utf-8-sig"
+
+# ================   DearEis tables   ====================
 
 # ACHTUNG: der Output ist aktuell für die Software DearEis angepasst -> ggf. Format anpassen
 
@@ -35,8 +49,27 @@ eis_output = "deareis"
 
 
 # ========================================================
+# Einstellungen Measurement documentation
+# ========================================================
+
+
+# Wie groß ist der Abstand der erwarteten Stepgröße (in V oder A)
+step_size = 0.05
+
+# Wie groß ist die Toleranz für die Rundung auf diese Steps (in V oder A)
+step_tolerance = 0.01
+
+# Auf wie viele Stellen soll die Ausgabe von Strom/Spannung gerundet werden?
+round_decimals = 2
+
+# Welche Zeiteinheit soll angezeigt werden (s, min, h)
+time_units = "min"
+
+
+# ========================================================
 # Einstellungen Plots
 # ========================================================
+
 
 # =================   Show Plots?   ======================
 
@@ -65,6 +98,7 @@ overlay_plots_dict = {
 
 # NOTE: nur Overlays für die gleiche Methode sind implementiert! → "task" müssen alle gleich sein!
 
+
 # ========================================================
 # Einstellungen LSV Extended Evaluation
 # ========================================================
@@ -74,10 +108,14 @@ overlay_plots_dict = {
 lsv_extended = True  # CURRENT LSV NOCH HINZUFÜGEN !
 
 # Auswahl der Smoothing Methode -> "rolling für rolling mean, sonst automatisch "bucket"
+
+#HIER SOLLTE EINE BESSERE ERKLÄRUNG DER SMOOTHING METHODS REIN -> FINALE ÜBERARBEITUNG SINNVOLL
+
 smoothing_method = "rolling"
 prominence = 1.1
 
 # =================   Rolling Mean   ======================
+
 # Gute Rauschunterdrückung aber schneidet am Anfang einige Punkte als NaN ab!
 
 if smoothing_method == "rolling":
@@ -100,6 +138,7 @@ if smoothing_method == "rolling":
     feature_points = None
 
 # ===============   Bucket Smoothing   ====================
+
 # Bucket Smoothing NUR bei vielen Datenpunkten oder wenig verrauschten Daten!
 # Vorteil: Schneidet keine Punkte ab
 
@@ -123,7 +162,7 @@ else:  # Else -> Smoothing Method wird immer "Bucket"
     current_smoothing_2nd_derivative = None
     derivative_smoothing_2nd_derivative = None
 
-# ==========   Peak Analysis   ===============
+# ================   Peak Analysis   ====================
 
 # Auf welchen Höhen werden Peakbreiten analysiert (-> CSV)
 peak_width_rel_heights = [0.5, 0.8, 0.95]
@@ -181,9 +220,11 @@ lsv_sensitivity_configs = [
     },
 ]
 
+
 # ========================================================
 # Einstellungen LSV Fits
 # ========================================================
+
 
 # Voltage Angaben in V
 
@@ -191,9 +232,11 @@ lsv_linear_fit = False
 fit_start_voltage = 2.3
 fit_end_voltage = 2.5
 
+
 # ========================================================
 # Einstellungen Evaluate
 # ========================================================
+
 
 # =============   Kennlinien auswerten?   =================
 
@@ -203,9 +246,11 @@ evaluate_curves = True
 # Sollen Plots gezeigt werden in "evaluate"?
 evaluate_show_plots = False
 
+
 # ========================================================
 # Folders
 # ========================================================
+
 
 raw_input_dir = Path("input")
 steps_raw_dir = Path("steps_raw")

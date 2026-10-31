@@ -1,10 +1,11 @@
 import sys
 import settings
+import pandas as pd
 from pathlib import Path
 from biologic_bcs915_csv_steps_to_csv import steps_to_csv
 from corrected_files_from_raw_csv import corrected_files
 from plot_from_corrected_csv import plot_corrected
-from dataframe_summary import dataframe_summary
+from measurement_documentation import measurement_documentation
 from evaluate_from_corrected_csv import evaluate
 from biologic_mpr_steps_to_csv import mpr_to_csv
 import csv
@@ -253,8 +254,8 @@ def main():
             print(step, task, loop1, segment, raw_rows, raw_skipped, corrected_rows, plot_status, lsv_status)
             writer.writerow([step, task, loop1, segment, raw_rows, raw_skipped, corrected_rows, plot_status, lsv_status])
 
-    # Dataframe Dokumentation
-    dataframe_summary(steps_corrected_dir, plot_dir)
+    # Measurement Dokumentation
+    measurement_documentation(steps_corrected_dir, export_dir)
 
     # ========================================================
     # Dokumentationsdatei für Evaluate, Print
@@ -265,9 +266,10 @@ def main():
 
         export_dir.mkdir(parents=True, exist_ok=True)
 
-        for measurement_id, deareis_df in deareis_export_data.items():
+        for measurement_id, (file_stem, deareis_df) in deareis_export_data.items():
             step, task, loop1, segment = measurement_id
-            deareis_filename = f"{step}_{task}_loop_{loop1:.0f}_{segment}_DearEIS.csv"
+            loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
+            deareis_filename = f"{file_stem}_{step}_{task}_{loop_part}_{segment}_DearEIS.csv"
             deareis_df.to_csv(export_dir / f"{deareis_filename}", index=False)
 
     if lsv_extended:

@@ -295,6 +295,9 @@ def plot_lsv_sensitivity_overlay_1st(
 ):
     plt.figure(figsize=(8, 5))
 
+    loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
+    loop_title = "" if pd.isna(loop1) else f"Loop {loop1:.0f}"
+
     for run in sensitivity_runs:
         label = run["label"]
         plot_data = run["plot_data"]
@@ -312,12 +315,12 @@ def plot_lsv_sensitivity_overlay_1st(
 
     plt.xlabel("Time /s")
     plt.ylabel("I /A")
-    plt.title(f"LSV sensitivity overlay - 1st derivative - Step {step}, Loop {loop1}")
+    plt.title(f"LSV sensitivity overlay - 1st derivative - Step {step}, {loop_title}")
     plt.legend()
     #plt.tight_layout()
 
     output_path = output_dir / (
-        f"{file_path.stem}_step_{step}_loop_{loop1}_sensitivity_overlay_d1LSV.png"
+        f"{file_path.stem}_step_{step}_{loop_part}_sensitivity_overlay_d1LSV.png"
     )
 
     plt.savefig(output_path, dpi=300)
@@ -337,6 +340,9 @@ def plot_lsv_sensitivity_overlay_2nd(
     show_plots,
 ):
     plt.figure(figsize=[8 * 1.1, 5 * 1.1])
+
+    loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
+    loop_title = "" if pd.isna(loop1) else f"Loop {loop1:.0f}"
 
     for run in sensitivity_runs:
         label = run["label"]
@@ -365,11 +371,11 @@ def plot_lsv_sensitivity_overlay_2nd(
 
     plt.xlabel("Voltage / V")
     plt.ylabel("d²I/dU²")
-    plt.title(f"LSV sensitivity overlay - Step {step}, Loop {loop1}")
+    plt.title(f"LSV sensitivity overlay - Step {step}, {loop_title}")
     plt.legend()
     #plt.tight_layout()
 
-    output_path = output_dir / f"{file_path.stem}_step_{step}_{loop1}_sensitivity_overlay_d2LSV.png"
+    output_path = output_dir / f"{file_path.stem}_step_{step}_{loop_part}_sensitivity_overlay_d2LSV.png"
     plt.savefig(output_path, dpi=300)
 
     if show_plots:
@@ -425,12 +431,15 @@ def plot_overlay(overlay_plots_data: list, output_dir: Path, show_plot: bool, ov
 
         step_label = step.replace("task_", "Step ")
 
+        loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
+        loop_title = "" if pd.isna(loop1) else f"Loop {loop1:.0f}"
+
         if  task == "CV" or task == "PEIS":
-            plt.plot(x_values, y_values, label=f"Step {step_label} - {task} - loop {loop1:.0f} at {voltage_number(voltage)}")
+            plt.plot(x_values, y_values, label=f"Step {step_label} - {task} - {loop_title} at {voltage_number(voltage)}")
         elif task == "GEIS" or task == "CC":
-            plt.plot(x_values, y_values, label=f"Step {step_label} - {task} - loop {loop1:.0f} at {current_number(current)}")
+            plt.plot(x_values, y_values, label=f"Step {step_label} - {task} - {loop_title} at {current_number(current)}")
         else:
-            plt.plot(x_values, y_values, label=f"{step_label} - {task} - loop {loop1}")
+            plt.plot(x_values, y_values, label=f"{step_label} - {task} - {loop_title}")
 
         # =============== Labels erstellen ================
 
@@ -516,9 +525,10 @@ def overlay_diff_lsv_plot_2nd(overlay_plots_diff2: list, output_dir: Path, show_
 
         step_label = step.replace("task_", "Step ")
 
+        loop_title = "" if pd.isna(loop1) else f"Loop {loop1:.0f}"
 
-        plt.plot(x_values, y_values, label=f"{step_label} {loop1:.0f} - LSV 2nd Diff", zorder=1)
-        plt.plot(x_values, y_savgol, label=f"{step_label} {loop1:.0f}- smoothed (SG)", zorder=2)
+        plt.plot(x_values, y_values, label=f"{step_label} {loop_title} - LSV 2nd Diff", zorder=1)
+        plt.plot(x_values, y_savgol, label=f"{step_label} {loop_title}- smoothed (SG)", zorder=2)
 
         plt.scatter(
             x_values[peaks_list],  # x-Werte der Peaks
@@ -570,7 +580,7 @@ def overlay_diff_lsv_plot_2nd(overlay_plots_diff2: list, output_dir: Path, show_
 
     plot_dir = output_dir / "Overlay Plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
-    plot_path = plot_dir / f"{overlay_plot_name}.png"
+    plot_path = plot_dir / f"{overlay_plot_name}_.png"
 
     # plt.tight_layout() -> nicht verwendet, da ohne padding nicht mehr symmetrisch
 
@@ -889,20 +899,28 @@ def plot_corrected(
 
     # File öffnen, Output Path kommt ggf. später dazu - Dataframe erstellen
 
-    for file_path in input_dir.glob("*.csv"):
-        df = pd.read_csv(file_path)
+    for original_file_path in input_dir.glob("*.csv"):
+        df = pd.read_csv(original_file_path)
+
+        file_path = original_file_path.with_stem(
+            original_file_path.stem.removesuffix("_corrected")
+        )
 
         # ========================================================
         # df.Series Metadaten erzeugen
         # ========================================================
 
         # Measurement_id für Doku definieren
-        measurement_id = (df["Step"].iloc[0], df["Task"].iloc[0], df["Loop 1 number"].iloc[0], df["Segment"].iloc[0])
+        loop1 = df["Loop 1 number"].iloc[0]  # brauchen wir für Aufteilung in Ordner
+        loop_id = None if pd.isna(loop1) else loop1
+
         method = df["Task"].iloc[0]
-        loop1 = df["Loop 1 number"].iloc[0] #brauchen wir für Aufteilung in Ordner
         segment = df["Segment"].iloc[0]
         step = df["Step"].iloc[0]
         task = df["Task"].iloc[0]
+
+        measurement_id = (df["Step"].iloc[0], df["Task"].iloc[0], loop_id, df["Segment"].iloc[0])
+
 
 
         # ========================================================
@@ -953,7 +971,7 @@ def plot_corrected(
                 # Für andere Exportformate ggf. Impedanzbetrag und Phase ergänzen.
                 # Achtung: Die Phase liegt in den Quelldaten in Radiant vor.
 
-                deareis_export_data[measurement_id] = deareis_df
+                deareis_export_data[measurement_id] = (file_path.stem, deareis_df)
 
 
         # ========================================================
