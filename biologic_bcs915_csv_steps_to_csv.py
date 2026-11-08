@@ -4,7 +4,7 @@ import pandas as pd
 
 def steps_to_csv(input_folder: Path, output_folder: Path):
 
-    # Input und Output Directory
+    # ================= Input und Output Directory ======================
 
     input_dir = Path(input_folder)
     if not input_dir.is_dir():
@@ -13,12 +13,13 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
     output_dir = Path(output_folder)
     output_dir.mkdir(exist_ok=True)
 
-    # Hilfsvariablen/Container für Output File Generation
+    # ================= Container für Output File Generation ======================
 
     counters = {}  # zählt verarbeitete Zeilen pro measurement_id -> hier Methode für pandas nötig
     skipped_rows = {} # Zählt Zeilen, die übersprungen wurden weil keine validen Daten
+    amplitude_by_step = {} # Amplituden sammeln
 
-    # File öffnen, Header Position für Pandas finden
+    # ================= File öffnen, Header Position für Pandas finden ======================
 
     for file_path in input_dir.glob("*.csv"):
 
@@ -28,6 +29,22 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
 
                 with open(file_path, newline="", encoding=encoding) as file:
                     for line_number, line in enumerate(file):
+
+                        # ================= Amplituden exrtahieren ======================
+
+                        if "U_AMPLITUDE:" in line:
+                            # Step Number für Zuordnung zur Measurement ID
+                            step_number = int(line.split(",")[0])
+                            eis_step = f"task_{str(step_number)}"
+
+                            # Amplitude rausschneiden, Leerzeichen entfernen
+                            amplitude = line.split("U_AMPLITUDE:")[1].split("mV")[0].strip()
+                            amplitude = float(amplitude) / 1000
+
+                            amplitude_by_step[eis_step] = amplitude
+
+                        # ================= Header ignorieren ======================
+
                         if line.startswith("Time /s"):
                             header_row = line_number
                             break
@@ -48,6 +65,8 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
                 if encoding == "cp1252":
                     raise
 
+        # ================= Columns to keep als df speichern ======================
+
         columns_to_keep = [
             "Time /s",
             "Step",
@@ -67,23 +86,37 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
         ]
         df = df[columns_to_keep]
 
+        # ================= Gruppieren und measurement_id erzeugen ======================
+
         for group_id, group in df.groupby(["Step", "Task", "Loop 1 number"],dropna=False):#ohne False wird REST abgeschnitten
             step, task, loop1 = group_id
+            loop_id = None if pd.isna(loop1) else loop1
             segment = "main"
             group = group.copy()
             group["Segment"] = "main"
-            measurement_id = (step, task, loop1, segment)
+
+            group["AC amplitude /V"] = amplitude_by_step.get(step)
+
+            measurement_id = (step, task, loop_id, segment)
             # NOW: Group by Loop 1 number to separate repeated method sequences.
             # Nested loops (Loop 2-4) are retained as columns but not used for grouping yet.
+
+            # ================= Loop erkennen, Suffix ======================
+
             if pd.isna(loop1) or loop1 == "":
                 output_path = output_dir / f"{file_path.stem}_{step}.csv"
             else:
                 output_path = output_dir / f"{file_path.stem}_{step}_{loop1:.0f}.csv"
+
+            # ================= Weiterverarbeitung je nach Methode ======================
+
             if task == "REST": # Rest wird nicht ausgewertet daher übersprungen
                 skipped_rows[measurement_id] = "n/a"
                 group.to_csv(output_path, index=False)
                 counters[measurement_id] = len(group)
             elif task in ["PEIS", "GEIS"]:
+
+                # hold_rows = Boolean mask -> reduzierter Dataframe - enthält nur TRUE & TRUE
                 hold_rows = (
                         group["U /V"].notna()
                         & group["I /A"].notna()
@@ -93,8 +126,9 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
                         & group["Real impedance /Ohms"].isna()
                         & group["- Imaginary impedance /Ohms"].isna()
                 )
-                hold_valid = group[hold_rows].copy()  # reduzierter Dataframe - enthält nur TRUE & TRUE
+                hold_valid = group[hold_rows].copy()
 
+                # eis_rows = Boolean mask -> reduzierter Dataframe - enthält nur TRUE & TRUE
                 eis_rows = (
                         group["U /V"].notna()
                         & group["I /A"].notna()
@@ -104,25 +138,31 @@ def steps_to_csv(input_folder: Path, output_folder: Path):
                         & group["Real impedance /Ohms"].notna()
                         & group["- Imaginary impedance /Ohms"].notna()
                 )
-                eis_valid = group[eis_rows].copy()  # reduzierter Dataframe - enthält nur TRUE & TRUE
+                eis_valid = group[eis_rows].copy()
 
                 segment = "hold"
                 hold_valid["Segment"] = "hold"
-                measurement_id_hold = (step, task, loop1, segment)
+                measurement_id_hold = (step, task, loop_id, segment)
                 hold_path = output_path.with_stem(output_path.stem + "_hold")
                 hold_valid.to_csv(hold_path, index=False)
 
                 segment = "eis"
                 eis_valid["Segment"] = "eis"
-                measurement_id_eis = (step, task, loop1, segment)
+                measurement_id_eis = (step, task, loop_id, segment)
                 eis_path = output_path.with_stem(output_path.stem + "_eis")
                 eis_valid.to_csv(eis_path, index=False)
+
+                # Dokumentation der Längen von EIS hold und eis, Skipped Rows
 
                 counters[measurement_id_hold] = len(hold_valid)
                 counters[measurement_id_eis] = len(eis_valid)
 
-                skipped_rows[measurement_id_hold] = len(group) - len(hold_valid)
-                skipped_rows[measurement_id_eis] = len(group) - len(eis_valid)
+                # Mögliche Hold- und EIS-Zeilen getrennt zählen
+                hold_candidates = group["Frequency /Hz"].isna()
+                eis_candidates = group["Frequency /Hz"].notna()
+
+                skipped_rows[measurement_id_hold] = hold_candidates.sum() - len(hold_valid)
+                skipped_rows[measurement_id_eis] = eis_candidates.sum() - len(eis_valid)
 
             else: # Für CV, VS .... alle Methoden, die nur auf Strom/Spannung basieren
                 valid_rows = group["U /V"].notna() & group["I /A"].notna() # Boolean Series - liefert True/False

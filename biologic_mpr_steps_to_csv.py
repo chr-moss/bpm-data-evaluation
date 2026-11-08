@@ -142,43 +142,6 @@ def detect_loop_starts_by_time_jump(
 
     return loop_starts
 
-#=====================================================
-# Hilfsfunktion: Loop Wert in Dataframe schreiben
-#=====================================================
-
-def assign_loop_numbers_from_starts(
-    df: pd.DataFrame,
-    loop_starts: list[int],
-) -> pd.DataFrame:
-
-    df = df.copy() #Absichern, dass nur geändert wird was an Ende returned wird
-
-    loop_starts = sorted(set(int(index) for index in loop_starts))
-    # int -> stellt sicher alles in, set -> Erzeugt eine Menge, Doppelte werden entfernt, sorted -> erzeugt sortierte Liste
-
-    loop_starts = [
-        index for index in loop_starts
-        if 0 <= index < len(df)
-    ]
-
-    if 0 not in loop_starts:
-        loop_starts.insert(0, 0)
-
-    if len(loop_starts) <= 1:
-        df["Loop 1 number"] = ""
-        return df
-
-    df["Loop 1 number"] = ""
-
-    for i, start in enumerate(loop_starts):
-        if i + 1 < len(loop_starts):
-            end = loop_starts[i + 1]
-        else:
-            end = len(df)
-
-        df.loc[start:end - 1, "Loop 1 number"] = i + 1
-
-    return df
 
 #=====================================================
 # Hilfsfunktion: Loop Wert in Dataframe schreiben
@@ -253,7 +216,12 @@ def split_by_loop_starts_and_filter_short_segments(
             end = len(df)
 
         segment_length = end - start
-        keep_segment = segment_length >= min_loop_segment_rows
+
+        # Einzelmessungen ohne erkannte Loop-Grenzen unabhängig von der Länge behalten.
+        # Bei mehreren erkannten Abschnitten weiterhin Mindestlänge verlangen,
+        # um kurze Fragmente herauszufiltern.
+        ### ACHTUNG: Das ist gut für sehr kurze Einzelmessungen. Falls aber Probleme auftreten --> entfernen!
+        keep_segment = (len(loop_starts) == 1) or (segment_length >= min_loop_segment_rows)
 
         segment_report.append({
             "candidate_loop": i + 1,
@@ -361,13 +329,13 @@ def mpr_to_csv(input_folder: Path, output_folder: Path):
         )
 
         # Loop 2 number
-        df["loop 2 number"] = ""
+        df["Loop 2 number"] = ""
 
         # Loop 3 number
-        df["loop 3 number"] = ""
+        df["Loop 3 number"] = ""
 
         # Loop 4 number
-        df["loop 4 number"] = ""
+        df["Loop 4 number"] = ""
 
         #=====================================================
         # Dataframe Spalten für Export festlegen
@@ -440,6 +408,6 @@ def mpr_to_csv(input_folder: Path, output_folder: Path):
 
             group_valid.to_csv(output_path, index=False)
 
-        # ========== Später: Ergebnisse an Main zurückgeben =========
+        # ========== Ergebnisse an Main zurückgeben =========
 
     return counters, skipped_rows

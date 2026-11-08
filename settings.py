@@ -42,10 +42,15 @@ csv_encoding = "utf-8-sig"
 # ACHTUNG: der Output ist aktuell für die Software DearEis angepasst -> ggf. Format anpassen
 
 # "plot" → nur plotten, kein Export
-# "deareis" → keine Plots, nur die Tabellen
+# "deareis" → keine EIS Plots, nur die Tabellen
 # "both" → beides ausgeben
 
 eis_output = "deareis"
+
+# Ausgabe von Excel-Files für LinKK (KIT-Tool für Kramers Kronig)
+# Nur aktiv wenn eis_output = deareis oder both
+
+lin_kk = False
 
 
 # ========================================================
@@ -72,6 +77,8 @@ time_units = "min"
 
 
 # =================   Show Plots?   ======================
+
+# Sollen Plots als Pop-Up gezeigt werden in Plots?
 
 plot_show_plots = False
 
@@ -103,53 +110,65 @@ overlay_plots_dict = {
 # Einstellungen LSV Extended Evaluation
 # ========================================================
 
+# macht alle Auswertungen jenseits des einfachen Anzeigens vom LSV
+# → 1. und 2. Ableitung
+# → Smoothing und fit der Ableitungen
 
-# Ausführen?
 lsv_extended = True  # CURRENT LSV NOCH HINZUFÜGEN !
 
-# Auswahl der Smoothing Methode -> "rolling für rolling mean, sonst automatisch "bucket"
 
-#HIER SOLLTE EINE BESSERE ERKLÄRUNG DER SMOOTHING METHODS REIN -> FINALE ÜBERARBEITUNG SINNVOLL
+# ==========   Allg. Smoothing Einstellungen   =============
+
+# Mit welcher Smoothing Methode soll geglätted werden?
+# → rolling: sehr effektiv aber erzeugt NaN am Anfang
+# → bucket: braucht ausreichend Punkte, aber kein NaN
 
 smoothing_method = "rolling"
+
+# Stellt die Empfindlichkeit der Peakerkennung ein
+# kleine Prominence → kleine Peaks werden erkannt
+
 prominence = 1.1
 
 # =================   Rolling Mean   ======================
-
-# Gute Rauschunterdrückung aber schneidet am Anfang einige Punkte als NaN ab!
 
 if smoothing_method == "rolling":
 
     # Rauschunterdrückung: Gibt an über wie viele Punkte gemittelt wird
     # Im Zweifel prüfen wie viele Punkte / mV aufgenommen wurden
-    # Wichtig
+
     current_smoothing_1st_derivative = 10  # → Glättet den Strom für 1. Ableitung
     current_smoothing_2nd_derivative = 50  # → Glättet den Strom für 2. Ableitung
     derivative_smoothing_2nd_derivative = 120  # → Glättet die 1. Ableitung vor der 2.
 
-    # Savgol Kriterien
+# =================   Savgol Filter   ======================
+
     # Savgol Widnow Points -> wie viele Punkte verwendet der Savgol Filter für Fits
-    # Muss < Feature-Breite sein -> Point Distance x savgol_window_size < Feature-Breite
+    # WICHTIG:  Point Distance x savgol_window_size MUSS < Feature-Breite sein
+
     savgol_window_points = 91
 
-    # Bucket Parameters not used
+    # Bucket Parameters not used (nicht ändern, es muss "None" übergeben werden
     bucket_width = None
     min_feature_size = None
-    feature_points = None
+    feature_points = None # TESTEN OB DAS NOCH GEBRAUCHT WIRD
 
 # ===============   Bucket Smoothing   ====================
 
-# Bucket Smoothing NUR bei vielen Datenpunkten oder wenig verrauschten Daten!
-# Vorteil: Schneidet keine Punkte ab
-
 else:  # Else -> Smoothing Method wird immer "Bucket"
-    # Bucket Parameters
-    bucket_width = 0.01  # in V
-    min_feature_size = 0.1  # in V
-    feature_points = round(min_feature_size / bucket_width)
-    savgol_window_points = round(min_feature_size / bucket_width / 2)
 
-    # Savgol Kriterien
+    # Bucket Größe einstellen
+    bucket_width = 0.01  # in V
+
+    # Mindestabstand zwischen zwei erkannten Peaks
+    min_feature_size = 0.2  # in V
+
+    feature_points = round(min_feature_size / bucket_width)
+
+# =================   Savgol Filter   ======================
+
+    savgol_window_points = max(7, round(min_feature_size / bucket_width / 2))
+
     if savgol_window_points % 2 == 0:
         savgol_window_points = savgol_window_points + 1
     if savgol_window_points < 7:
@@ -157,7 +176,7 @@ else:  # Else -> Smoothing Method wird immer "Bucket"
     elif 7 <= savgol_window_points < 10:
         print("Savgol window points low, this can be inaccurate")
 
-    # Rolling Parameters not used
+    # Rolling Parameters not used (nicht ändern, es muss "None" übergeben werden
     current_smoothing_1st_derivative = None
     current_smoothing_2nd_derivative = None
     derivative_smoothing_2nd_derivative = None
@@ -177,6 +196,9 @@ lsv_sensitivity_plots = False
 lsv_sensitivity_analysis = False
 
 lsv_sensitivity_overlay_plots = False
+
+# HIER Parameter für Sensitivitätsanalyse einstellen
+# 3 verschiedene, um Einfluss der Methode zu testen
 
 lsv_sensitivity_configs = [
     {
@@ -240,12 +262,11 @@ fit_end_voltage = 2.5
 
 # =============   Kennlinien auswerten?   =================
 
-# für Kennlinien: "True", für Einzelmessungen "False"
+# für Kennlinien: "True", für nur Einzelmessungen "False"
 evaluate_curves = True
 
-# Sollen Plots gezeigt werden in "evaluate"?
+# Sollen Plots der Pop-Up gezeigt werden in "evaluate"?
 evaluate_show_plots = False
-
 
 # ========================================================
 # Folders

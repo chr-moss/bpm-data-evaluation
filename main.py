@@ -1,4 +1,3 @@
-import sys
 import settings
 import pandas as pd
 from pathlib import Path
@@ -39,7 +38,7 @@ def main():
     # ACHTUNG: der Output ist aktuell für die Software DearEis angepasst -> ggf. Format anpassen
 
     # "plot" → nur plotten, kein Export
-    # "deareis" → keine Plots, nur die Tabellen
+    # "deareis" → keine EIS Plots in Plots, über Evaluate weiterhin EIS Plots
     # "both" → beides ausgeben
 
     eis_output = settings.eis_output
@@ -73,7 +72,6 @@ def main():
     # ========================================================
     # Einstellungen LSV Extended Evaluation
     # ========================================================
-
 
     # Ausführen?
     lsv_extended = settings.lsv_extended
@@ -186,6 +184,8 @@ def main():
     # ========================================================
     # Dateien aufrufen
     # ========================================================
+
+    # Für BCS 815 ist noch nicht alles implementiert daher ist das hier deutlich weniger!
     if potentiostat == "815":
         raw_counts, skipped_rows = mpr_to_csv(raw_input_dir, steps_raw_dir)
     else:
@@ -218,7 +218,7 @@ def main():
                                                                             eis_output,
                                                                             )
 
-
+    # Wird nur aufgerufen wenn evaluate = True
     if evaluate_curves:
         eis_results_df, curve_doc_df = evaluate(steps_corrected_dir, evaluate_dir, eis_hold_values, evaluate_show_plots)
 
@@ -226,11 +226,10 @@ def main():
     # Dokumentationsdatei für Steps und Plot, Print
     # ========================================================
 
-    output_dir = Path(plot_dir)
-    output_dir.mkdir(exist_ok=True)
-    output_path = output_dir / "inline_documentation.csv"
+    export_dir.mkdir(exist_ok=True)
+    output_path = export_dir / "inline_documentation.csv"
 
-    with  open(output_path, "w", newline="") as output_file:
+    with  open(output_path, "w", newline="", encoding="utf-8-sig") as output_file:
         writer = csv.writer(output_file, delimiter=",")
 
         header = ["Step.", "Method", "Loop", "Segment", "Rows written", "Rows skipped", "Rows corrected", "Plot", "Lines cut"]
@@ -271,6 +270,14 @@ def main():
             loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
             deareis_filename = f"{file_stem}_{step}_{task}_{loop_part}_{segment}_DearEIS.csv"
             deareis_df.to_csv(export_dir / f"{deareis_filename}", index=False)
+
+        if settings.lin_kk:
+            for measurement_id, (file_stem, deareis_df) in deareis_export_data.items():
+                step, task, loop1, segment = measurement_id
+                loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
+                linkk_filename = f"{file_stem}_{step}_{task}_{loop_part}_{segment}_LinKK.xlsx"
+                deareis_df.to_excel(export_dir / f"{linkk_filename}", index=False)
+
 
     if lsv_extended:
 

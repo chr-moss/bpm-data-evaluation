@@ -5,6 +5,8 @@ import pandas as pd
 
 def corrected_files(input_folder: Path, output_folder: Path):
 
+    # =================   File Handling   ======================
+
     # Input und Output Directory
 
     input_dir = Path(input_folder)
@@ -14,7 +16,7 @@ def corrected_files(input_folder: Path, output_folder: Path):
     output_dir = Path(output_folder)
     output_dir.mkdir(exist_ok=True)
 
-    # Übergabe Dict Dokumentation
+    # Übergabe Dict Dokumentation - Container erstellen
 
     corrected_counter = {}
 
@@ -25,12 +27,21 @@ def corrected_files(input_folder: Path, output_folder: Path):
 
         df = pd.read_csv(file_path)
 
-        # Measurement-ID für Dokumentation
+        # =================   Measurement ID erzeugen   ======================
+
         if df.empty:
             continue
-        measurement_id = (df["Step"].iloc[0], df["Task"].iloc[0], df["Loop 1 number"].iloc[0], df["Segment"].iloc[0])
 
-        # Pandas Series erzeugen -> hier direkt im Dataframe, da wir den in die CSV schreiben
+        step = df["Step"].iloc[0]
+        task = df["Task"].iloc[0]
+        loop1 = df["Loop 1 number"].iloc[0]
+        segment = df["Segment"].iloc[0]
+
+        loop_id = None if pd.isna(loop1) else loop1
+
+        measurement_id = (step, task, loop_id, segment)
+
+        # =================   Ausgewählte Numeric Columns erstellen   ======================
 
         numeric_columns = [
             "Time /s",
@@ -42,11 +53,14 @@ def corrected_files(input_folder: Path, output_folder: Path):
             "Impedance phase /rad",
             "Real impedance /Ohms",
             "- Imaginary impedance /Ohms",
+            "AC amplitude /V",
         ]
 
         for column in numeric_columns:
             if column in df.columns:
                 df[column] = pd.to_numeric(df[column], errors="coerce")
+
+        # =================   Schreiben und Dokumentieren   ======================
 
         # Schreiben
         df.to_csv(output_path, index=False)

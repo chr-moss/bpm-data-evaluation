@@ -66,7 +66,7 @@ def lsv_differentials(smoothing_method,
         voltage_valid = df["U /V"][valid_2nd]
         diff_2nd_valid = second_lsv_derivative[valid_2nd]
 
-        # Savgol Filter und Peakauswertung
+        # =============   Savgol Filter und Peakauswertung   =================
 
         diff_2nd_savgol = savgol_filter(
             diff_2nd_valid.to_numpy(dtype=float),
@@ -86,10 +86,6 @@ def lsv_differentials(smoothing_method,
         x_array = voltage_valid.to_numpy(dtype=float)
         x_index = np.arange(len(x_array))
 
-        # Spannungsachse für Interpolation
-        x_array = voltage_valid.to_numpy(dtype=float)
-        x_index = np.arange(len(x_array))
-
         # Peakbreiten für mehrere Höhen berechnen
         for current_rel_height in peak_width_rel_heights:
             width_results = peak_widths(
@@ -98,18 +94,19 @@ def lsv_differentials(smoothing_method,
                 rel_height=current_rel_height
             )
 
-            widths = width_results[0]
+            widths = width_results[0] #Aktuell nicht verwendet
             width_heights = width_results[1]
             left_ips = width_results[2]
             right_ips = width_results[3]
 
+            # Interpolatin für Peaklagen
             left_voltages = np.interp(left_ips, x_index, x_array)
             right_voltages = np.interp(right_ips, x_index, x_array)
             peak_width_voltages = right_voltages - left_voltages
 
             if current_rel_height == plot_peak_width_rel_height:
                 peak_width_markers.append({
-                    "peak_width_rel_heights": peak_width_rel_heights,
+                    "peak_width_rel_heights": current_rel_height,
                     "left_voltages": left_voltages,
                     "right_voltages": right_voltages,
                     "width_heights": width_heights
@@ -120,7 +117,7 @@ def lsv_differentials(smoothing_method,
                     "Step": step,
                     "Task": task,
                     "Loop 1 number": loop1,
-                    "peak_width_rel_heights": peak_width_rel_heights,
+                    "peak_width_rel_heights": current_rel_height,
                     "Peak number": i + 1,
                     "Peak voltage / V": voltage_valid.iloc[peak],
                     "Peak height": diff_2nd_savgol[peak],
@@ -146,7 +143,7 @@ def lsv_differentials(smoothing_method,
                 * bucket_width
         )
 
-        # Bucket-Einträge zählen
+        # Bucket-Einträge zählen - Anzahl an Werten je Bucket, aktuell nicht verwendet
         bucket_counts = lsv_bucket_df.groupby("Voltage bucket").size()
 
         # Über Buckets mitteln - Bucket df erzeugen
@@ -230,7 +227,7 @@ def lsv_differentials(smoothing_method,
 
             if current_rel_height == plot_peak_width_rel_height:
                 peak_width_markers.append({
-                    "peak_width_rel_heights": peak_width_rel_heights,
+                    "peak_width_rel_heights": current_rel_height,
                     "left_voltages": left_voltages,
                     "right_voltages": right_voltages,
                     "width_heights": width_heights
@@ -241,7 +238,7 @@ def lsv_differentials(smoothing_method,
                     "Step": step,
                     "Task": task,
                     "Loop 1 number": loop1,
-                    "peak_width_rel_heights": peak_width_rel_heights,
+                    "peak_width_rel_heights": current_rel_height,
                     "Peak number": i + 1,
                     "Peak voltage / V": bucket_voltage_valid.iloc[peak],
                     "Peak height": diff_2nd_savgol[peak],
@@ -313,8 +310,8 @@ def plot_lsv_sensitivity_overlay_1st(
 
         plt.plot(x, y, label=label)
 
-    plt.xlabel("Time /s")
-    plt.ylabel("I /A")
+    plt.xlabel("Voltage / V")
+    plt.ylabel(r"$dI/dU$ / A V$^{-1}$")
     plt.title(f"LSV sensitivity overlay - 1st derivative - Step {step}, {loop_title}")
     plt.legend()
     #plt.tight_layout()
@@ -370,7 +367,7 @@ def plot_lsv_sensitivity_overlay_2nd(
             )
 
     plt.xlabel("Voltage / V")
-    plt.ylabel("d²I/dU²")
+    plt.ylabel(r"$d^2I/dU^2$ / A V$^{-2}$")
     plt.title(f"LSV sensitivity overlay - Step {step}, {loop_title}")
     plt.legend()
     #plt.tight_layout()
@@ -389,14 +386,6 @@ def plot_lsv_sensitivity_overlay_2nd(
 # ========================================================
 
 def plot_overlay(overlay_plots_data: list, output_dir: Path, show_plot: bool, overlay_plot_name: str):
-
-    for index, dataset in enumerate(overlay_plots_data):
-        print(
-            index,
-            repr(dataset["task"]),
-            type(dataset["task"]),
-            repr(dataset["segment"]),
-        )
 
     # =============== Test ob alle task gleich sind ================
 
@@ -429,9 +418,8 @@ def plot_overlay(overlay_plots_data: list, output_dir: Path, show_plot: bool, ov
         x_label = run["x_label"]
         y_label = run["y_label"]
 
-        step_label = step.replace("task_", "Step ")
+        step_label = step.replace("task_", "")
 
-        loop_part = "" if pd.isna(loop1) else f"loop_{loop1:.0f}"
         loop_title = "" if pd.isna(loop1) else f"Loop {loop1:.0f}"
 
         if  task == "CV" or task == "PEIS":
@@ -449,11 +437,11 @@ def plot_overlay(overlay_plots_data: list, output_dir: Path, show_plot: bool, ov
         # Y Labels
         if task == "CV" or (task == "PEIS" and segment == "hold"):
             voltage_label = voltage.iloc[0]
-            plt.ylabel("I / A at" + f"{voltage_number(voltage_label)}", fontsize=14, labelpad=8)
+            plt.ylabel("I / A at" + f"{voltage_number(voltage)}", fontsize=14, labelpad=8)
 
         elif task == "CC" or (task == "GEIS" and segment == "hold"):
             current_label = current.iloc[0]
-            plt.ylabel("U /V at" + f"{current_number(current_label)}", fontsize=14, labelpad=8)
+            plt.ylabel("U /V at" + f"{current_number(current)}", fontsize=14, labelpad=8)
         else: # VS sollte unter else fallen
             plt.ylabel(y_label, fontsize=14, labelpad=8)
 
@@ -531,8 +519,8 @@ def overlay_diff_lsv_plot_2nd(overlay_plots_diff2: list, output_dir: Path, show_
         plt.plot(x_values, y_savgol, label=f"{step_label} {loop_title}- smoothed (SG)", zorder=2)
 
         plt.scatter(
-            x_values[peaks_list],  # x-Werte der Peaks
-            y_savgol[peaks_list],  # y-Werte der Peaks
+            x_values.iloc[peaks_list],  # x-Werte der Peaks über Positionen abgefragt
+            y_savgol[peaks_list],  # y-Werte der Peaks -Numpy indiziert grundsätzlich Positionen
             marker="x",
             color = "r",
             label="detected peaks",
@@ -580,7 +568,7 @@ def overlay_diff_lsv_plot_2nd(overlay_plots_diff2: list, output_dir: Path, show_
 
     plot_dir = output_dir / "Overlay Plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
-    plot_path = plot_dir / f"{overlay_plot_name}_.png"
+    plot_path = plot_dir / f"{overlay_plot_name}.png"
 
     # plt.tight_layout() -> nicht verwendet, da ohne padding nicht mehr symmetrisch
 
@@ -605,7 +593,7 @@ def current_number(currents: pd.Series):
 # Hilfsfunktionen: Standard-Plots
 # ========================================================
 
-def cv_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path, step: pd.Series, show_plot: bool, loop1):
+def cv_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path, step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[8*1.1,5*1.1])
     plt.plot(times, currents, label = f"{step_label} - CV")
@@ -627,7 +615,7 @@ def cv_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_pat
     plt.close()
 
 def peis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path,
-            step: pd.Series, show_plot: bool, loop1):
+            step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[8 * 1.1, 5 * 1.1])
     plt.plot(times, currents, label=f"{step_label} - PEIS Hold")
@@ -640,7 +628,7 @@ def peis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_p
     else:
         plot_dir = output_dir / f"Loop_{loop1:.0f}"
         plot_dir.mkdir(parents=True, exist_ok=True)
-        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_CV.png"
+        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_PEIS_hold.png"
 
     # plt.tight_layout() -> nicht verwendet, da ohne padding nicht mehr symmetrisch
     plt.savefig(plot_path, dpi=300)
@@ -649,10 +637,10 @@ def peis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_p
     plt.close()
 
 def cc_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path,
-            step: pd.Series, show_plot: bool, loop1):
+            step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[8 * 1.1, 5 * 1.1])
-    plt.plot(times, voltages, label=f"{step_label} - CV")
+    plt.plot(times, voltages, label=f"{step_label} - CC")
     plt.legend()
     plt.xlabel("Time / s", fontsize=14, labelpad=10)
     plt.ylabel("U / V at" + f"{current_number(currents)}", fontsize=14, labelpad=8)
@@ -662,7 +650,7 @@ def cc_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_pat
     else:
         plot_dir = output_dir / f"Loop_{loop1:.0f}"
         plot_dir.mkdir(parents=True, exist_ok=True)
-        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_CV.png"
+        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_CC.png"
 
     # plt.tight_layout() -> nicht verwendet, da ohne padding nicht mehr symmetrisch
     plt.savefig(plot_path, dpi=300)
@@ -671,7 +659,7 @@ def cc_plot(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_pat
     plt.close()
 
 def geis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path,
-            step: pd.Series, show_plot: bool, loop1):
+            step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[8 * 1.1, 5 * 1.1])
     plt.plot(times, voltages, label=f"{step_label} - GEIS Hold")
@@ -684,7 +672,7 @@ def geis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_p
     else:
         plot_dir = output_dir / f"Loop_{loop1:.0f}"
         plot_dir.mkdir(parents=True, exist_ok=True)
-        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_CV.png"
+        plot_path = plot_dir / f"{file_path.stem}_{step_label}_{loop1:.0f}_GEIS_hold.png"
 
     # plt.tight_layout() -> nicht verwendet, da ohne padding nicht mehr symmetrisch
     plt.savefig(plot_path, dpi=300)
@@ -692,7 +680,7 @@ def geis_hold(times: pd.Series, voltages: pd.Series, currents: pd.Series, file_p
         plt.show()
     plt.close()
 
-def lsv_plot(voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path, step: pd.Series, show_plot: bool, loop1):
+def lsv_plot(voltages: pd.Series, currents: pd.Series, file_path: Path, output_dir: Path, step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[6.4*1.3,4.8*1.3])
     plt.plot(voltages, currents, label = f"{step_label} - LSV")
@@ -712,7 +700,7 @@ def lsv_plot(voltages: pd.Series, currents: pd.Series, file_path: Path, output_d
         plt.show()
     plt.close()
 
-def diff_lsv_plot(voltages: pd.Series, diff_currents: pd.Series, file_path: Path, output_dir: Path, step: pd.Series, show_plot: bool, loop1):
+def diff_lsv_plot(voltages: pd.Series, diff_currents: pd.Series, file_path: Path, output_dir: Path, step: str, show_plot: bool, loop1):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[6.4 * 1.3, 4.8 * 1.3])
     plt.plot(voltages, diff_currents, label=f"{step_label} - LSV")
@@ -732,7 +720,7 @@ def diff_lsv_plot(voltages: pd.Series, diff_currents: pd.Series, file_path: Path
         plt.show()
     plt.close()
 
-def diff_lsv_plot_2nd(voltage_valid, diff_2nd_valid, file_path: Path, output_dir: Path, step: pd.Series,
+def diff_lsv_plot_2nd(voltage_valid, diff_2nd_valid, file_path: Path, output_dir: Path, step: str,
                   show_plot: bool, loop1, diff_2nd_savgol,peaks_list, peak_width_markers):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[6.4 * 1.3, 4.8 * 1.3])
@@ -787,8 +775,8 @@ def diff_lsv_plot_2nd(voltage_valid, diff_2nd_valid, file_path: Path, output_dir
         plt.show()
     plt.close()
 
-def peis_nyquist(real_impedance: pd.Series, imaginary_impedance: pd.Series, file_path: Path, output_dir: Path, step: pd.Series, show_plot: bool, loop1, voltages):
-    step_label = step.replace("task_", "Step ")
+def peis_nyquist(real_impedance: pd.Series, imaginary_impedance: pd.Series, file_path: Path, output_dir: Path, step: str, show_plot: bool, loop1, voltages):
+    step_label = step.replace("task_", "")
     plt.figure(figsize=[6.4*1.3,4.8*1.3])
     plt.plot(real_impedance, imaginary_impedance, label = f"Step {step_label} - PEIS at {voltage_number(voltages)}")
     plt.legend()
@@ -808,7 +796,7 @@ def peis_nyquist(real_impedance: pd.Series, imaginary_impedance: pd.Series, file
     plt.close()
 
 
-def geis_nyquist(real_impedance: pd.Series, imaginary_impedance: pd.Series, file_path: Path, output_dir: Path, step: pd.Series, show_plot: bool, loop1, currents):
+def geis_nyquist(real_impedance: pd.Series, imaginary_impedance: pd.Series, file_path: Path, output_dir: Path, step: str, show_plot: bool, loop1, currents):
     step_label = step.replace("task_", "Step ")
     plt.figure(figsize=[6.4*1.3,4.8*1.3])
     plt.plot(real_impedance, imaginary_impedance, label = f"{step_label} - GEIS at {current_number(currents)}")
@@ -864,7 +852,6 @@ def plot_corrected(
     if lsv_sensitivity_configs is None:
         lsv_sensitivity_configs = []
 
-    lsv_sensitivity_data = []
     overlay_plots_data = []
     overlay_plots_diff1 = []
     overlay_plots_diff2 = []
@@ -883,7 +870,7 @@ def plot_corrected(
     output_dir = Path(output_folder)
     output_dir.mkdir(exist_ok=True)
 
-    # Dokumentation erstellen plot dict
+    # Container für Dokumentation erstellen
 
     plot_results = {}
     lsv_lines_cut = {}
@@ -891,13 +878,15 @@ def plot_corrected(
     peak_widths_data = []
     lsv_sensitivity_peak_data = []
 
+    # Bedingungen für Overlay Diff Plots prüfen
+
     create_lsv_diff_overlays = (
             overlay_plots
             and lsv_extended
             and "VS" in overlay_plots_dict["task"]
     )
 
-    # File öffnen, Output Path kommt ggf. später dazu - Dataframe erstellen
+    # File öffnen, Dataframe aus Datei erstellen
 
     for original_file_path in input_dir.glob("*.csv"):
         df = pd.read_csv(original_file_path)
@@ -911,6 +900,7 @@ def plot_corrected(
         # ========================================================
 
         # Measurement_id für Doku definieren
+
         loop1 = df["Loop 1 number"].iloc[0]  # brauchen wir für Aufteilung in Ordner
         loop_id = None if pd.isna(loop1) else loop1
 
@@ -919,8 +909,7 @@ def plot_corrected(
         step = df["Step"].iloc[0]
         task = df["Task"].iloc[0]
 
-        measurement_id = (df["Step"].iloc[0], df["Task"].iloc[0], loop_id, df["Segment"].iloc[0])
-
+        measurement_id = (step , task , loop_id, segment)
 
 
         # ========================================================
@@ -930,7 +919,7 @@ def plot_corrected(
         if method == "VS": # for LSV evaluation: U should only be increasing - thus we remove non-increasing values
             df = df.reset_index(drop=True)
 
-            delta_v = df["U /V"].diff()
+            delta_v = df["U /V"].diff() #Differenz der jeweils aufeinanderfolgenden Werte
             falling_or_equal = delta_v.iloc[1:] <= 0
 
             bad_points = falling_or_equal[falling_or_equal] # Boolean mask: True where voltage no longer increases
@@ -1034,6 +1023,10 @@ def plot_corrected(
                         row["plot_peak_width_rel_height"] = config["plot_peak_width_rel_height"]
                         row["peak_width_rel_heights"] = str(config["peak_width_rel_heights"])
 
+                    ##############################################
+                    # DER WERT WIRD AKTUELL NICHT WEITER VERWENDET
+                    ##############################################
+
                     lsv_sensitivity_peak_data.extend(sensitivity_peak_data)
 
 
@@ -1127,20 +1120,21 @@ def plot_corrected(
         # Daten für Overlay Abspeichern
         # ========================================================
 
-        overlay_combinations = set(zip(
-            overlay_plots_dict["step"],
-            overlay_plots_dict["task"],
-            overlay_plots_dict["loop"],
-            overlay_plots_dict["segment"],
-        ))
+        # Aus den Overlay-Einstellungen vollständige Messungs-IDs erzeugen.
 
-        current_combination = (step, task, loop1, segment)
+        if overlay_plots:
+            overlay_combinations = set(zip(
+                overlay_plots_dict["step"],
+                overlay_plots_dict["task"],
+                overlay_plots_dict["loop"],
+                overlay_plots_dict["segment"],
+            ))
 
-        print("Gesucht:", overlay_combinations)
-        print("Aktuell:", current_combination)
-        print("Treffer:", current_combination in overlay_combinations)
+        current_combination = (step, task, loop_id, segment)
 
         base_name = file_path.stem.split("_task_", 1)[0]
+
+        # Nur exakt passende Kombinationen aus Step, Task, Loop und Segment auswählen.
 
         if overlay_plots and current_combination in overlay_combinations:
 
@@ -1205,6 +1199,8 @@ def plot_corrected(
                     x_values = lsv_plot_data["voltage_buckets"]
                     y_values = lsv_plot_data["lsv_bucket_derivative_1st"]
 
+                valid_values = x_values.notna() & y_values.notna()
+
                 x_label = "U /V"
                 y_label = "dI/dU / A V$^{-1}$"
 
@@ -1214,6 +1210,8 @@ def plot_corrected(
                     "task": task,
                     "loop1": loop1,
                     "segment": segment,
+                    "voltage": voltage,
+                    "current": current,
                     "x_values": x_values[valid_values].copy(),
                     "y_values": y_values[valid_values].copy(),
                     "x_label": x_label,
@@ -1227,8 +1225,10 @@ def plot_corrected(
                     x_values = lsv_plot_data["bucket_voltage_valid"]
                     y_values = lsv_plot_data["bucket_diff_2nd_valid"]
 
+                valid_values = x_values.notna() & y_values.notna()
+
                 x_label = "U /V"
-                y_label = "dI/dU / A V$^{-1}$"
+                y_label = r"$d^2I/dU^2$ / A V$^{-2}$"
 
                 overlay_plots_diff2.append({
                     "base_name": base_name,
@@ -1236,6 +1236,8 @@ def plot_corrected(
                     "task": task,
                     "loop1": loop1,
                     "segment": segment,
+                    "voltage": voltage,
+                    "current": current,
                     "x_values": x_values[valid_values].copy(),
                     "y_values": y_values[valid_values].copy(),
                     "x_label": x_label,
@@ -1313,14 +1315,14 @@ def plot_corrected(
         # Aufruf der allgemeinen Overlay Plot funktion
         plot_overlay(overlay_plots_data, output_dir, show_plots, overlay_plot_name)
 
-        requested_tasks = overlay_plots_dict["task"]
-
         if create_lsv_diff_overlays:
 
             # Aufruf diff 1 Funktion
             plot_overlay(overlay_plots_diff1, output_dir, show_plots, overlay_plot_name)
 
             # Aufruf diff 2 Funktion
-            plot_overlay(overlay_plots_diff2, output_dir, show_plots, overlay_plot_name)
+            overlay_diff_lsv_plot_2nd(
+                overlay_plots_diff2, output_dir, show_plots, overlay_plot_name
+            )
 
     return plot_results, lsv_lines_cut, eis_hold_values, width_df, deareis_export_data
